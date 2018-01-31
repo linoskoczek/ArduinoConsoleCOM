@@ -16,7 +16,7 @@ class Connector {
 
         return Collections
                 .list(enumComm)
-                .parallelStream()
+                .stream()
                 .filter(c -> c.getPortType() == CommPortIdentifier.PORT_SERIAL)
                 .collect(Collectors.toList());
     }
@@ -33,8 +33,7 @@ class Connector {
             portNotFoundMessage();
             System.exit(2);
             return null;
-        }
-        else
+        } else
             return choosePortFromList(ports);
     }
 

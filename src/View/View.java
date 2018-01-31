@@ -1,15 +1,20 @@
 package View;
 
 import Model.Model;
+
 import javax.swing.*;
 import java.awt.*;
-import java.awt.event.*;
+import java.awt.event.ActionListener;
+import java.awt.event.WindowAdapter;
+import java.awt.event.WindowEvent;
 
 public class View extends JFrame {
     private Model model;
     private JTextField input;
     private JTextArea output;
     private JButton send;
+    private ActionListener sendAction = null, sendViaEnterAction = null;
+    private Thread modelListener = null;
 
     public View(Model model) throws HeadlessException {
         super("Arduino Console");
@@ -30,13 +35,15 @@ public class View extends JFrame {
                 model.closeProgram();
             }
         });
+
+        createModelListener();
     }
 
     private void createInputSection() {
         JPanel inputSection = new JPanel();
         inputSection.setLayout(new BorderLayout());
         input = new JTextField();
-        input.setMargin(new Insets(5,5,5,5));
+        input.setMargin(new Insets(5, 5, 5, 5));
         send = new JButton("Send");
 
         inputSection.add(input, BorderLayout.CENTER);
@@ -52,7 +59,7 @@ public class View extends JFrame {
         output = new JTextArea();
         output.setLineWrap(true);
         output.setEditable(false);
-        output.setMargin(new Insets(5,5,5,5));
+        output.setMargin(new Insets(5, 5, 5, 5));
         JScrollPane scroll = new JScrollPane(output,
                 JScrollPane.VERTICAL_SCROLLBAR_AS_NEEDED,
                 JScrollPane.HORIZONTAL_SCROLLBAR_NEVER);
@@ -63,11 +70,35 @@ public class View extends JFrame {
     }
 
     public void addSendListener(ActionListener sendMessage) {
+        sendAction = sendMessage;
         send.addActionListener(sendMessage);
     }
 
     public void addSendViaEnterListener(ActionListener sendMessage) {
+        sendViaEnterAction = sendMessage;
         input.addActionListener(sendMessage);
+    }
+
+    public void removeActionListeners() {
+        send.removeActionListener(sendAction);
+        send.removeActionListener(sendViaEnterAction);
+    }
+
+    private void createModelListener() {
+        modelListener = new Thread(this::startModelListener);
+        modelListener.start();
+    }
+
+    public void restartModelListener() {
+        modelListener.interrupt();
+        while (modelListener.isAlive()) {
+            try {
+                Thread.sleep(15);
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            }
+        }
+        createModelListener();
     }
 
     public String getAndClearUserInput() {
@@ -77,7 +108,27 @@ public class View extends JFrame {
         return text;
     }
 
-    public void gotMessageEvent(String message) {
+    private void startModelListener() {
+        String message;
+        while (model.isRunning && !modelListener.isInterrupted()) {
+            message = model.getMessage();
+            if (message == null) {
+                try {
+                    Thread.sleep(50);
+                } catch (InterruptedException e) {
+                    break;
+                }
+            } else {
+                gotMessageEvent(message);
+            }
+        }
+    }
+
+    private void gotMessageEvent(String message) {
         output.append(message + "\n");
+    }
+
+    public void updateModel(Model model) {
+        this.model = model;
     }
 }

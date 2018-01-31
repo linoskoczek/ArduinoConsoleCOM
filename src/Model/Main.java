@@ -1,8 +1,7 @@
 package Model;
 
-import Model.Model;
-import View.View;
 import Controller.Controller;
+import View.View;
 
 public class Main {
     private static Model model;
@@ -11,11 +10,12 @@ public class Main {
 
     public static void main(String... args) {
         model = new Model();
-        View view = new View(model);
-        Controller controller = new Controller(model, view);
+        view = new View(model);
+        controller = new Controller(model, view);
     }
 
     public static void createNewModel() {
+        model = new Model();
         view.updateModel(model);
         controller.updateModel(model);
     }

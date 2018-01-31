@@ -13,14 +13,13 @@ import java.util.TooManyListenersException;
 public class Model implements SerialPortEventListener {
     private static final int TIME_OUT = 2000;
     private static final int DATA_RATE = 9600;
-
+    public boolean isRunning = true;
     private SerialPort serialPort;
     private BufferedReader input;
     private OutputStream output;
     private LinkedList<String> messages = new LinkedList<>();
-    public boolean isRunning = true;
 
-    public Model() {
+    Model() {
         openCommunicationPort(Connector.choosePort());
     }
 
@@ -42,12 +41,16 @@ public class Model implements SerialPortEventListener {
         }
     }
 
-    public synchronized void closeProgram() {
-        isRunning = false;
+    private synchronized void disconnectPort() {
         if (serialPort != null) {
             serialPort.close();
             serialPort.removeEventListener();
         }
+    }
+
+    public synchronized void closeProgram() {
+        isRunning = false;
+        disconnectPort();
         System.exit(0);
     }
 
@@ -65,12 +68,18 @@ public class Model implements SerialPortEventListener {
 
     @Override
     public void serialEvent(SerialPortEvent serialPortEvent) {
-        if(serialPortEvent.getEventType() == SerialPortEvent.DATA_AVAILABLE) {
+        if (serialPortEvent.getEventType() == SerialPortEvent.DATA_AVAILABLE) {
             try {
                 messages.add(input.readLine());
             } catch (IOException e) {
-                System.err.println("Device is not connected!");
-                isRunning = false;
+                messages.add("Device has disconnected! Asking for a new port if available in 5 seconds...");
+                disconnectPort();
+                try {
+                    Thread.sleep(5000);
+                } catch (InterruptedException e1) {
+                    e1.printStackTrace();
+                }
+                new Thread(Main::createNewModel).start();
             }
         }
     }

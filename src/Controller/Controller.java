@@ -11,24 +11,18 @@ public class Controller {
         this.model = model;
         this.view = view;
 
-        Thread modelListener = new Thread(this::startModelListener);
-        modelListener.start();
-
-        view.addSendListener(actionEvent -> model.write(view.getAndClearUserInput()));
-        view.addSendViaEnterListener(actionEvent -> model.write(view.getAndClearUserInput()));
+        createActionListeners();
     }
 
-    private void startModelListener() {
-        String message;
-        while(model.isRunning) {
-            message = model.getMessage();
-            if(message == null) {
-                try {
-                    Thread.sleep(50);
-                } catch (InterruptedException ignored) {}
-            } else {
-                view.gotMessageEvent(message);
-            }
-        }
+    public void updateModel(Model model) {
+        view.removeActionListeners();
+        this.model = model;
+        createActionListeners();
+        view.restartModelListener();
+    }
+
+    private void createActionListeners() {
+        view.addSendListener(actionEvent -> model.write(view.getAndClearUserInput()));
+        view.addSendViaEnterListener(actionEvent -> model.write(view.getAndClearUserInput()));
     }
 }
